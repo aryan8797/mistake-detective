@@ -1,0 +1,83 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#111827">
+<title>Mistake Detective</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:20px;background:#0b1020;color:#f3f6ff;font:16px system-ui;max-width:800px;margin:auto}
+h1{color:#a5b4fc}
+.card{background:#141c30;border:1px solid #34415e;border-radius:14px;padding:16px;margin:14px 0}
+input,select,textarea{display:block;width:100%;padding:11px;margin:6px 0 12px;border-radius:8px;border:1px solid #34415e;background:#0b1020;color:white;font:inherit}
+button{padding:11px 14px;border:0;border-radius:8px;background:#a5b4fc;color:#11152a;font-weight:bold;margin:4px;cursor:pointer}
+.item{border-top:1px solid #34415e;padding:12px 0;overflow-wrap:anywhere}
+small{color:#aab6cf}
+</style>
+</head>
+<body>
+<h1>🕵️ Mistake Detective</h1>
+<p>Find the pattern. Fix the mistake. Improve your next test.</p>
+<div class="card">
+<strong id="stats">0 mistakes recorded</strong>
+<form id="form">
+<label>Question or topic</label>
+<input id="question" required placeholder="e.g. Newton's laws, Q. 12">
+<label>Subject</label>
+<select id="subject"><option>Physics</option><option>Chemistry</option><option>Biology</option></select>
+<label>Mistake type</label>
+<select id="category"><option>Concept gap</option><option>Forgot formula/fact</option><option>Calculation error</option><option>Misread question</option><option>Time pressure</option><option>Guessed answer</option></select>
+<label>What went wrong?</label>
+<textarea id="cause" placeholder="Why did you get it wrong?"></textarea>
+<label>Correct idea / lesson</label>
+<textarea id="lesson" required placeholder="Write the correct method or fact"></textarea>
+<button type="submit">Save mistake</button>
+</form>
+</div>
+<div class="card">
+<h2>Your notebook</h2>
+<input id="search" placeholder="Search your mistakes...">
+<div id="list"></div>
+</div>
+<div class="card">
+<button id="export">Export backup</button>
+<button id="clear">Clear all</button>
+<p><small>Your notes are saved in this browser on this device. Export a backup before clearing browser data.</small></p>
+</div>
+<script>
+const KEY='mistake-detective-notes';
+let notes=[];
+try{notes=JSON.parse(localStorage.getItem(KEY)||'[]');if(!Array.isArray(notes))notes=[]}catch(e){notes=[]}
+const $=id=>document.getElementById(id);
+const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function save(){try{localStorage.setItem(KEY,JSON.stringify(notes));return true}catch(e){alert('Storage is full. Export a backup first.');return false}}
+function render(){
+$('stats').textContent=notes.length+' mistakes recorded';
+const q=$('search').value.toLowerCase();
+const shown=notes.filter(n=>(n.question+' '+n.subject+' '+n.category+' '+n.cause+' '+n.lesson).toLowerCase().includes(q));
+$('list').innerHTML=shown.length?shown.map(n=>'<div class="item"><small>'+esc(n.subject)+' · '+esc(n.category)+' · '+esc(n.date)+'</small><h3>'+esc(n.question)+'</h3><p><b>What went wrong:</b> '+esc(n.cause||'Not noted')+'</p><p><b>Lesson:</b> '+esc(n.lesson)+'</p><button data-delete="'+n.id+'">Delete</button></div>').join(''):'<p>No mistakes yet. Add your first clue above!</p>';
+}
+$('form').addEventListener('submit',e=>{
+e.preventDefault();
+notes.unshift({id:Date.now().toString()+Math.random(),question:$('question').value.trim(),subject:$('subject').value,category:$('category').value,cause:$('cause').value.trim(),lesson:$('lesson').value.trim(),date:new Date().toLocaleDateString()});
+if(save()){$('form').reset();render()}
+});
+$('list').addEventListener('click',e=>{
+const id=e.target.dataset.delete;if(!id)return;
+notes=notes.filter(n=>n.id!==id);save();render();
+});
+$('search').addEventListener('input',render);
+$('export').addEventListener('click',()=>{
+const a=document.createElement('a');
+a.href=URL.createObjectURL(new Blob([JSON.stringify(notes,null,2)],{type:'application/json'}));
+a.download='mistake-detective-backup.json';a.click();URL.revokeObjectURL(a.href);
+});
+$('clear').addEventListener('click',()=>{
+if(confirm('Delete all saved mistakes? Export a backup first if needed.')){notes=[];save();render()}
+});
+render();
+</script>
+</body>
+</html>
